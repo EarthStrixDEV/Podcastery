@@ -5,6 +5,9 @@ export interface Episode {
   title: string
   thumbnail: string
   addedAt: number
+  durationSeconds?: number
+  channelTitle?: string
+  channelThumbnail?: string
 }
 
 export interface Playlist {
