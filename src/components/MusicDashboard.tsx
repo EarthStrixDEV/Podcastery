@@ -26,6 +26,17 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
+function formatDuration(totalSeconds: number): string {
+  if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) return ''
+  const h = Math.floor(totalSeconds / 3600)
+  const m = Math.floor((totalSeconds % 3600) / 60)
+  const s = Math.floor(totalSeconds % 60)
+  if (h > 0) {
+    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+  }
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
 const CARD_ACCENTS = [
   'from-fuchsia-500/90 to-indigo-600/90',
   'from-amber-400/90 to-orange-600/90',
@@ -309,9 +320,31 @@ export function MusicDashboard() {
                           <Trash2 className="size-3.5" />
                         </button>
 
-                        <p className="absolute bottom-3 left-3.5 right-3.5 line-clamp-2 text-sm font-semibold leading-tight text-white">
-                          {episode.title}
-                        </p>
+                        {episode.durationSeconds ? (
+                          <span className="absolute bottom-14 right-3 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] font-medium text-white">
+                            {formatDuration(episode.durationSeconds)}
+                          </span>
+                        ) : null}
+
+                        <div className="absolute bottom-3 left-3.5 right-3.5">
+                          <p className="line-clamp-2 text-sm font-semibold leading-tight text-white">
+                            {episode.title}
+                          </p>
+                          {episode.channelTitle ? (
+                            <div className="mt-1 flex items-center gap-1.5">
+                              {episode.channelThumbnail ? (
+                                <img
+                                  src={episode.channelThumbnail}
+                                  alt={episode.channelTitle}
+                                  className="size-4 rounded-full"
+                                />
+                              ) : null}
+                              <span className="truncate text-xs text-white/80">
+                                {episode.channelTitle}
+                              </span>
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
                     )
                   })}
