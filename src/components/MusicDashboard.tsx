@@ -55,7 +55,15 @@ export function MusicDashboard() {
   const [duration, setDuration] = useState(0)
   const [volume, setVolumeState] = useState(70)
 
-  const { playlists, createPlaylist, deletePlaylist, addEpisode, removeEpisode } = usePlaylists()
+  const {
+    playlists,
+    createPlaylist,
+    deletePlaylist,
+    addEpisode,
+    addEpisodeFromSearchResult,
+    importYouTubePlaylist,
+    removeEpisode,
+  } = usePlaylists()
   const playerRef = useRef<YouTubePlayerHandle>(null)
   const progressTimer = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -444,6 +452,8 @@ export function MusicDashboard() {
         defaultPlaylistId={selectedPlaylistId}
         onCreatePlaylist={createPlaylist}
         onAddEpisode={addEpisode}
+        onAddEpisodeFromSearchResult={addEpisodeFromSearchResult}
+        onImportPlaylist={importYouTubePlaylist}
       />
     </div>
   )
