@@ -170,3 +170,52 @@ export async function searchVideos(query: string): Promise<SearchResultItem[]> {
       thumbnail: item.snippet.thumbnails.medium?.url ?? item.snippet.thumbnails.default.url,
     }))
 }
+
+interface PlaylistItemsApiItem {
+  contentDetails: { videoId: string }
+}
+
+interface PlaylistItemsApiResponse {
+  items: PlaylistItemsApiItem[]
+  nextPageToken?: string
+}
+
+export async function fetchPlaylistVideoIds(playlistId: string): Promise<string[]> {
+  const key = getApiKey()
+  if (!key) {
+    throw new Error('ยังไม่ได้ตั้งค่า YouTube API Key')
+  }
+
+  const videoIds: string[] = []
+  let pageToken = ''
+
+  do {
+    const params = new URLSearchParams({
+      part: 'contentDetails',
+      maxResults: '50',
+      playlistId,
+      key,
+    })
+    if (pageToken) params.set('pageToken', pageToken)
+
+    let res: Response
+    try {
+      res = await fetch(`${API_BASE}/playlistItems?${params}`)
+    } catch {
+      throw new Error('เชื่อมต่อ YouTube ไม่สำเร็จ ลองใหม่อีกครั้ง')
+    }
+
+    if (res.status === 403) {
+      throw new Error('โควต้า YouTube API หมดสำหรับวันนี้ ลองใหม่พรุ่งนี้')
+    }
+    if (!res.ok) {
+      throw new Error('นำเข้า playlist ไม่สำเร็จ ตรวจสอบว่า playlist เป็นสาธารณะ')
+    }
+
+    const data: PlaylistItemsApiResponse = await res.json()
+    videoIds.push(...data.items.map((item) => item.contentDetails.videoId))
+    pageToken = data.nextPageToken ?? ''
+  } while (pageToken)
+
+  return videoIds
+}
