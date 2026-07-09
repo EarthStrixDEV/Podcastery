@@ -6,7 +6,7 @@
 
 **Architecture:** เพิ่มเลเยอร์ `src/lib/youtubeDataApi.ts` แยกจาก `youtube.ts` เดิมชัดเจน, ขยาย `Episode` type ด้วย field optional ใหม่, ปรับ `usePlaylists` hook ให้เรียก Data API แบบ non-blocking (fallback เสมอถ้า fail), เพิ่ม tab ค้นหาใน `AddEpisodeDialog`, และเพิ่ม duration/channel badge บน episode card
 
-**Tech Stack:** React 19 + TypeScript + Vite 5, ไม่มี test runner ติดตั้ง (ทดสอบผ่าน `npm run build` type-check + Chrome preview tools), ไม่มี git repo (ไม่มี commit steps)
+**Tech Stack:** React 19 + TypeScript + Vite 5, ไม่มี test runner ติดตั้ง (ทดสอบผ่าน `npm run build` type-check + Chrome preview tools), git repo เพิ่ง init ใหม่ (branch `master`, baseline commit มีอยู่แล้วก่อน Task 1) — commit ทุก task ตาม step สุดท้ายของแต่ละ task ห้าม commit ไฟล์ `.env`
 
 ## Global Constraints
 
@@ -16,44 +16,37 @@
 - URL ที่มีทั้ง `v=` และ `list=` ต้องตีความเป็นวิดีโอเดี่ยวเสมอ ไม่ใช่ playlist
 - ห้าม auto-search ขณะพิมพ์ — ต้องกดปุ่มค้นหาเท่านั้น (ประหยัด quota)
 - `npm run build` ต้องผ่านไม่มี TypeScript error ทุก task
+- ทุก URL query string ในไฟล์ `youtubeDataApi.ts` ต้องสร้างด้วย `URLSearchParams` เสมอ ห้าม manual string interpolation (`?a=${x}&b=${y}`)
 
 ---
 
-## Task 1: Setup — env var + gitignore + example
+## Task 1: Setup — .env.example (คอนโทรลเลอร์ทำ `.env` และ `.gitignore` ไว้ล่วงหน้าแล้ว)
+
+**สถานะ:** `.env` (มี key จริง) และการเพิ่ม `.env` เข้า `.gitignore` เสร็จไปแล้วนอก workflow นี้ก่อนเริ่ม Task 1 — ห้ามแก้ไข `.env` หรือ `.gitignore` ในทาสก์นี้ และห้ามอ่าน/พิมพ์เนื้อหาไฟล์ `.env` ออกมาที่ใดเด็ดขาด (เสี่ยง key หลุดเข้า log/commit message)
 
 **Files:**
-- Create: `.env` (ค่าจริง ไม่ commit)
 - Create: `.env.example`
-- Modify: `.gitignore` (สร้างถ้ายังไม่มี)
 
 **Interfaces:**
-- Produces: `import.meta.env.VITE_YOUTUBE_API_KEY` ใช้ได้จากทุกไฟล์ในโปรเจกต์ (Vite inject ให้อัตโนมัติ)
+- Produces: `import.meta.env.VITE_YOUTUBE_API_KEY` ใช้ได้จากทุกไฟล์ในโปรเจกต์ (Vite inject ให้อัตโนมัติ, ค่าจริงมีอยู่แล้วใน `.env` ที่ root)
 
-- [ ] **Step 1: สร้างไฟล์ `.env`**
-
-พี่เอิร์ธให้ API key ไว้แล้วในการสนทนาก่อนหน้า — controller (ผู้ dispatch task นี้) จะส่งค่าจริงมาให้แยกต่างหากนอกไฟล์แผนนี้ ห้ามเขียน key ลงในไฟล์เอกสารใดๆ (README, comment, log) มีที่เดียวที่ถูกต้องคือไฟล์ `.env`:
-
-```
-VITE_YOUTUBE_API_KEY=<ใส่ค่าจริงที่ controller ให้มา>
-```
-
-- [ ] **Step 2: สร้างไฟล์ `.env.example`**
+- [ ] **Step 1: สร้างไฟล์ `.env.example`**
 
 ```
 VITE_YOUTUBE_API_KEY=
 ```
 
-- [ ] **Step 3: เช็คและสร้าง `.gitignore`**
+- [ ] **Step 2: ยืนยันว่า `.env` ถูก ignore แล้ว (ห้ามแก้ไขไฟล์ ตรวจอย่างเดียว)**
 
-ตรวจว่ามีไฟล์ `.gitignore` อยู่แล้วหรือไม่ (จาก Vite scaffold ปกติจะมี `node_modules`, `dist` อยู่แล้ว) เพิ่มบรรทัดนี้ถ้ายังไม่มี:
+Run: `git check-ignore .env`
+Expected: พิมพ์ `.env` กลับมา (แปลว่าถูก ignore แล้ว) — ถ้าไม่มีผลลัพธ์ ให้รายงาน BLOCKED ทันที ห้ามแก้ `.gitignore` เอง
 
+- [ ] **Step 3: commit**
+
+```bash
+git add .env.example
+git commit -m "chore: add .env.example for YouTube Data API key"
 ```
-.env
-```
-
-- [ ] **Step 4: ตรวจสอบว่า Vite เห็น env var**
-
-สร้างไฟล์ทดสอบชั่วคราวไม่ต้องทำ — ใช้ตรวจใน Task 2 แทน (import.meta.env จะพิสูจน์ตัวเองตอนเรียก fetch จริง)
 
 ---
 
@@ -154,15 +147,32 @@ export async function fetchVideoDetails(videoId: string): Promise<VideoDetails |
 Run: `npm run build`
 Expected: ผ่านไม่มี error (ไฟล์นี้ยังไม่ถูก import ที่ไหน แต่ต้อง type-check ผ่านตัวเอง)
 
-- [ ] **Step 3: ทดสอบ manual ผ่าน Node/browser console**
+- [ ] **Step 3: ทดสอบผ่านฟังก์ชันจริงที่เพิ่งเขียน (ห้าม hardcode API key ในคำสั่งทดสอบใดๆ)**
 
-เปิด dev server (`npm run dev` ผ่าน preview tool) แล้วรันใน browser console (ผ่าน `preview_eval`):
+ห้ามเขียนหรือพิมพ์ค่า API key ออกมาเองในทุกกรณี — ไฟล์ `.env` มี key ตั้งไว้แล้ว และฟังก์ชัน `fetchVideoDetails`/`fetchVideoDetailsBatch` อ่านค่าจาก `import.meta.env.VITE_YOUTUBE_API_KEY` เองโดยอัตโนมัติอยู่แล้วเมื่อรันผ่าน Vite dev server จริง
 
-```javascript
-fetch('https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=dQw4w9WgXcQ&key=YOUR_API_KEY_HERE').then(r => r.json()).then(console.log)
+สร้างไฟล์ทดสอบชั่วคราว `src/temp-task2-test.ts`:
+
+```typescript
+import { fetchVideoDetails } from './lib/youtubeDataApi'
+
+fetchVideoDetails('dQw4w9WgXcQ').then((result) => {
+  console.log('TASK2_TEST_RESULT', JSON.stringify(result))
+})
 ```
 
-Expected: response JSON มี `items[0].contentDetails.duration` เป็นรูปแบบ `PT3M33S` และ `snippet.channelTitle` มีค่า — ยืนยันว่า key ใช้งานได้จริงก่อนไปต่อ Task ถัดไป
+import ไฟล์นี้ชั่วคราวใน `src/main.tsx` (เพิ่ม `import './temp-task2-test'` บรรทัดบนสุด) เปิด dev server ผ่าน preview tool (`preview_start` ด้วย config ชื่อ `vite-dev` จาก `.claude/launch.json`) แล้วดึง console log ผ่าน `preview_console_logs`
+
+Expected: เห็น log บรรทัดที่ขึ้นต้นด้วย `TASK2_TEST_RESULT` ตามด้วย JSON ที่มี `durationSeconds` เป็นตัวเลข > 0 และ `channelTitle` มีค่า (ไม่ใช่ `null` หรือ `undefined`) — ยืนยันว่า key ใช้งานได้จริงและฟังก์ชัน parse ถูกต้อง
+
+**สำคัญ:** หลังทดสอบผ่านแล้ว ต้องลบทั้ง `src/temp-task2-test.ts` และบรรทัด import ที่เพิ่มใน `src/main.tsx` ออกทั้งหมดก่อน commit — ไฟล์ชั่วคราวนี้ห้ามหลุดเข้า commit เด็ดขาด รัน `npm run build` อีกครั้งหลังลบเพื่อยืนยันว่าโปรเจกต์ยัง build ผ่านโดยไม่มีไฟล์ทดสอบนี้เหลืออยู่
+
+- [ ] **Step 4: commit**
+
+```bash
+git add src/lib/youtubeDataApi.ts
+git commit -m "feat: add fetchVideoDetails and fetchVideoDetailsBatch to youtubeDataApi"
+```
 
 ---
 
@@ -221,15 +231,20 @@ export async function fetchChannelInfo(channelId: string): Promise<ChannelInfo |
 Run: `npm run build`
 Expected: ผ่านไม่มี error
 
-- [ ] **Step 3: ทดสอบ manual ผ่าน browser console**
+- [ ] **Step 3: ทดสอบผ่านฟังก์ชันจริงที่เพิ่งเขียน (ห้าม hardcode API key ในคำสั่งทดสอบใดๆ)**
 
-ผ่าน `preview_eval` ใน dev server:
+ใช้วิธีเดียวกับ Task 2 Step 3: สร้างไฟล์ทดสอบชั่วคราว `src/temp-task3-test.ts` เรียก `fetchChannelInfo` ตรงๆ (ใช้ channel ID `UCuAXFkgsw1L7xaCfnd5JJOw`), import เข้า `src/main.tsx` ชั่วคราว, ทดสอบผ่าน dev server + `preview_console_logs`, log ด้วย prefix `TASK3_TEST_RESULT`
 
-```javascript
-fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet&id=UCuAXFkgsw1L7xaCfnd5JJOw&key=YOUR_API_KEY_HERE').then(r => r.json()).then(console.log)
+Expected: log มี `title` และ `thumbnail` เป็น URL รูปภาพจริง (ไม่ใช่ `null`)
+
+**สำคัญ:** ลบไฟล์ทดสอบชั่วคราวและ import ออกก่อน commit เหมือน Task 2
+
+- [ ] **Step 4: commit**
+
+```bash
+git add src/lib/youtubeDataApi.ts
+git commit -m "feat: add fetchChannelInfo to youtubeDataApi"
 ```
-
-Expected: `items[0].snippet.title` และ `items[0].snippet.thumbnails.default.url` มีค่าจริง
 
 ---
 
@@ -269,11 +284,17 @@ export async function searchVideos(query: string): Promise<SearchResultItem[]> {
     throw new Error('ยังไม่ได้ตั้งค่า YouTube API Key')
   }
 
+  const params = new URLSearchParams({
+    part: 'snippet',
+    type: 'video',
+    maxResults: '12',
+    q: query,
+    key,
+  })
+
   let res: Response
   try {
-    res = await fetch(
-      `${API_BASE}/search?part=snippet&type=video&maxResults=12&q=${encodeURIComponent(query)}&key=${key}`
-    )
+    res = await fetch(`${API_BASE}/search?${params}`)
   } catch {
     throw new Error('เชื่อมต่อ YouTube ไม่สำเร็จ ลองใหม่อีกครั้ง')
   }
@@ -302,13 +323,20 @@ export async function searchVideos(query: string): Promise<SearchResultItem[]> {
 Run: `npm run build`
 Expected: ผ่านไม่มี error
 
-- [ ] **Step 3: ทดสอบ manual ผ่าน browser console**
+- [ ] **Step 3: ทดสอบผ่านฟังก์ชันจริงที่เพิ่งเขียน (ห้าม hardcode API key ในคำสั่งทดสอบใดๆ)**
 
-```javascript
-fetch('https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=12&q=lofi&key=YOUR_API_KEY_HERE').then(r => r.json()).then(d => console.log(d.items.length, d.items[0]))
+ใช้วิธีเดียวกับ Task 2 Step 3: สร้างไฟล์ทดสอบชั่วคราว `src/temp-task4-test.ts` เรียก `searchVideos('lofi')`, import เข้า `src/main.tsx` ชั่วคราว, ทดสอบผ่าน dev server + `preview_console_logs`, log ด้วย prefix `TASK4_TEST_RESULT` (เช่น `console.log('TASK4_TEST_RESULT', results.length, JSON.stringify(results[0]))`)
+
+Expected: `results.length` > 0, แต่ละ item มี `videoId` และ `title`
+
+**สำคัญ:** ลบไฟล์ทดสอบชั่วคราวและ import ออกก่อน commit เหมือน Task 2
+
+- [ ] **Step 4: commit**
+
+```bash
+git add src/lib/youtubeDataApi.ts
+git commit -m "feat: add searchVideos to youtubeDataApi"
 ```
-
-Expected: `items.length` > 0, แต่ละ item มี `id.videoId` และ `snippet.title`
 
 ---
 
@@ -343,13 +371,17 @@ export async function fetchPlaylistVideoIds(playlistId: string): Promise<string[
   let pageToken = ''
 
   do {
+    const params = new URLSearchParams({
+      part: 'contentDetails',
+      maxResults: '50',
+      playlistId,
+      key,
+    })
+    if (pageToken) params.set('pageToken', pageToken)
+
     let res: Response
     try {
-      res = await fetch(
-        `${API_BASE}/playlistItems?part=contentDetails&maxResults=50&playlistId=${playlistId}&key=${key}${
-          pageToken ? `&pageToken=${pageToken}` : ''
-        }`
-      )
+      res = await fetch(`${API_BASE}/playlistItems?${params}`)
     } catch {
       throw new Error('เชื่อมต่อ YouTube ไม่สำเร็จ ลองใหม่อีกครั้ง')
     }
@@ -375,15 +407,20 @@ export async function fetchPlaylistVideoIds(playlistId: string): Promise<string[
 Run: `npm run build`
 Expected: ผ่านไม่มี error
 
-- [ ] **Step 3: ทดสอบ manual ผ่าน browser console**
+- [ ] **Step 3: ทดสอบผ่านฟังก์ชันจริงที่เพิ่งเขียน (ห้าม hardcode API key ในคำสั่งทดสอบใดๆ)**
 
-ใช้ playlist สาธารณะที่รู้จักแน่นอน (เช่น playlist ID `PLillGF-RfqbYE6Ik_EuXA2iZFcE082B3s` — YouTube's own "First YouTube videos" หรือ playlist สาธารณะอื่นที่พี่เอิร์ธมี):
+ใช้วิธีเดียวกับ Task 2 Step 3: สร้างไฟล์ทดสอบชั่วคราว `src/temp-task5-test.ts` เรียก `fetchPlaylistVideoIds('PLillGF-RfqbYE6Ik_EuXA2iZFcE082B3s')` (playlist สาธารณะที่รู้จักแน่นอน — YouTube's own "First YouTube videos"), import เข้า `src/main.tsx` ชั่วคราว, ทดสอบผ่าน dev server + `preview_console_logs`, log ด้วย prefix `TASK5_TEST_RESULT`
 
-```javascript
-fetch('https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&maxResults=50&playlistId=PLillGF-RfqbYE6Ik_EuXA2iZFcE082B3s&key=YOUR_API_KEY_HERE').then(r => r.json()).then(d => console.log(d.items.length))
+Expected: array ที่ได้มีความยาว > 0 (ไม่ throw error)
+
+**สำคัญ:** ลบไฟล์ทดสอบชั่วคราวและ import ออกก่อน commit เหมือน Task 2
+
+- [ ] **Step 4: commit**
+
+```bash
+git add src/lib/youtubeDataApi.ts
+git commit -m "feat: add fetchPlaylistVideoIds to youtubeDataApi"
 ```
-
-Expected: `items.length` > 0 (ไม่ error)
 
 ---
 
@@ -452,6 +489,13 @@ Expected: ผ่านไม่มี error
 
 Expected: ผลลัพธ์ตรงตาม comment ทั้ง 3 บรรทัด
 
+- [ ] **Step 5: commit**
+
+```bash
+git add src/lib/youtube.ts
+git commit -m "feat: add extractYouTubePlaylistId to youtube.ts"
+```
+
 ---
 
 ## Task 7: `playlist.ts` — ขยาย Episode type
@@ -491,6 +535,13 @@ export interface Playlist {
 
 Run: `npm run build`
 Expected: ผ่านไม่มี error (field เป็น optional ไม่กระทบโค้ดเดิมที่ยังไม่ได้ set ค่าพวกนี้)
+
+- [ ] **Step 3: commit**
+
+```bash
+git add src/types/playlist.ts
+git commit -m "feat: extend Episode type with duration and channel fields"
+```
 
 ---
 
@@ -631,6 +682,13 @@ JSON.parse(localStorage.getItem('podcastery:playlists'))
 
 Expected: episode ล่าสุดมี `durationSeconds` เป็นตัวเลข > 0, `channelTitle` มีค่า, `channelThumbnail` เป็น URL รูปภาพ
 
+- [ ] **Step 6: commit**
+
+```bash
+git add src/hooks/usePlaylists.ts
+git commit -m "feat: enrich addEpisode with Data API duration and channel info"
+```
+
 ---
 
 ## Task 9: `usePlaylists.ts` — addEpisodeFromSearchResult
@@ -688,6 +746,13 @@ import { fetchVideoDetails, fetchChannelInfo, fetchVideoDetailsBatch, type Video
 
 Run: `npm run build`
 Expected: ผ่านไม่มี error
+
+- [ ] **Step 5: commit**
+
+```bash
+git add src/hooks/usePlaylists.ts
+git commit -m "feat: add addEpisodeFromSearchResult to usePlaylists"
+```
 
 ---
 
@@ -791,6 +856,13 @@ async function buildEpisodeFromVideoDetails(details: VideoDetails): Promise<Epis
 Run: `npm run build`
 Expected: ผ่านไม่มี error
 
+- [ ] **Step 6: commit**
+
+```bash
+git add src/hooks/usePlaylists.ts
+git commit -m "feat: add importYouTubePlaylist to usePlaylists"
+```
+
 ---
 
 ## Task 11: `formatDuration` helper ใน MusicDashboard
@@ -832,6 +904,8 @@ function formatDuration(totalSeconds: number): string {
 
 Run: `npm run build`
 Expected: ผ่านไม่มี error (ฟังก์ชันยังไม่ถูกเรียกใช้ที่ไหน แต่ไม่มี unused-var error เพราะ `noUnusedLocals` เช็คเฉพาะ local variable ไม่เช็ค top-level function ที่ export — ถ้า error ให้ export ฟังก์ชันนี้ออกไปด้วยเพื่อกัน unused warning)
+
+**หมายเหตุ:** ยังไม่ต้อง commit ใน task นี้ — `formatDuration` ยังไม่ถูกเรียกใช้จริง จะ commit รวมกับ Task 12 ที่นำไปใช้จริงใน JSX เพื่อไม่ให้มี commit ที่โค้ดยังไม่ทำงาน
 
 ---
 
@@ -901,6 +975,13 @@ Expected: ผ่านไม่มี error
 เปิด dev server, ดู episode ที่เพิ่มจาก Task 8 (มี `durationSeconds`/`channelTitle` แล้ว) ผ่าน `preview_screenshot` หรือ `preview_snapshot`
 
 Expected: เห็น duration badge มุมล่างขวาเหนือ title, เห็นชื่อช่อง + avatar ใต้ title ของ episode card
+
+- [ ] **Step 5: commit (รวม Task 11 + 12)**
+
+```bash
+git add src/components/MusicDashboard.tsx
+git commit -m "feat: show duration badge and channel info on episode cards"
+```
 
 ---
 
@@ -1336,6 +1417,13 @@ Expected: เห็นข้อความ "กำลังนำเข้า X
 Expected: เพิ่มแค่ 1 episode (วิดีโอเดียว) ไม่ใช่ทั้ง playlist — ตรวจสอบผ่าน `preview_eval`:
 ```javascript
 JSON.parse(localStorage.getItem('podcastery:playlists')).find(p => /* playlist ที่เพิ่งเพิ่ม */)
+```
+
+- [ ] **Step 8: commit**
+
+```bash
+git add src/components/AddEpisodeDialog.tsx src/components/MusicDashboard.tsx
+git commit -m "feat: add search and playlist-import tabs to AddEpisodeDialog"
 ```
 
 ---

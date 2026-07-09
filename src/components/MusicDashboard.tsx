@@ -11,13 +11,17 @@ import {
   Trash2,
   ListMusic,
   Headphones,
+  Home,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { usePlaylists } from '@/hooks/usePlaylists'
 import { AddEpisodeDialog } from '@/components/AddEpisodeDialog'
+import { HomeView } from '@/components/HomeView'
+import { SelectPlaylistDialog } from '@/components/SelectPlaylistDialog'
 import { YouTubePlayer, type YouTubePlayerHandle } from '@/components/YouTubePlayer'
 import { confirmDestructive, notifySuccess } from '@/lib/swal'
+import type { SearchResultItem } from '@/lib/youtubeDataApi'
 
 function formatTime(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00'
@@ -46,7 +50,10 @@ const CARD_ACCENTS = [
   'from-violet-400/90 to-purple-600/90',
 ]
 
+type ActiveView = 'home' | 'playlist'
+
 export function MusicDashboard() {
+  const [activeView, setActiveView] = useState<ActiveView>('playlist')
   const [isPlaying, setIsPlaying] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null)
@@ -54,6 +61,8 @@ export function MusicDashboard() {
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const [volume, setVolumeState] = useState(70)
+  const [pickedClip, setPickedClip] = useState<SearchResultItem | null>(null)
+  const [selectPlaylistOpen, setSelectPlaylistOpen] = useState(false)
 
   const {
     playlists,
@@ -172,6 +181,11 @@ export function MusicDashboard() {
     notifySuccess('ลบ episode แล้ว')
   }
 
+  const handlePickClip = (clip: SearchResultItem) => {
+    setPickedClip(clip)
+    setSelectPlaylistOpen(true)
+  }
+
   const VolumeIcon = volume === 0 ? VolumeX : volume < 50 ? Volume1 : Volume2
 
   return (
@@ -194,6 +208,20 @@ export function MusicDashboard() {
             </div>
             <span className="font-heading text-lg font-bold tracking-tight">Podcastery</span>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setActiveView('home')}
+            className={cn(
+              'mb-4 flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ease-out',
+              activeView === 'home'
+                ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:translate-x-0.5'
+            )}
+          >
+            <Home className="size-4" />
+            Home
+          </button>
 
           <div className="flex items-center justify-between pb-3">
             <span className="text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/50">
@@ -219,20 +247,23 @@ export function MusicDashboard() {
           ) : (
             <div className="flex flex-col gap-1">
               {playlists.map((playlist) => {
-                const active = playlist.id === selectedPlaylistId
+                const active = activeView === 'playlist' && playlist.id === selectedPlaylistId
                 return (
                   <div
                     key={playlist.id}
                     className={cn(
-                      'group flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm transition-colors',
+                      'group flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm transition-all duration-150 ease-out',
                       active
                         ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                        : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/60'
+                        : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:translate-x-0.5'
                     )}
                   >
                     <button
                       type="button"
-                      onClick={() => setSelectedPlaylistId(playlist.id)}
+                      onClick={() => {
+                        setSelectedPlaylistId(playlist.id)
+                        setActiveView('playlist')
+                      }}
                       className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
                     >
                       <ListMusic className="size-4 shrink-0" />
@@ -257,25 +288,58 @@ export function MusicDashboard() {
         </aside>
 
         {/* Episode grid */}
-        <main className="flex-1 min-w-0 overflow-y-auto px-8 py-7">
-          {!selectedPlaylist ? (
+        <main
+          className={cn(
+            'flex-1 min-w-0 overflow-y-auto',
+            activeView === 'home' ? 'p-0' : 'px-8 py-7'
+          )}
+        >
+          {activeView === 'home' ? (
+            <HomeView onPickClip={handlePickClip} />
+          ) : !selectedPlaylist ? (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
               เลือก playlist ทางซ้ายเพื่อดู episode
             </div>
           ) : (
             <>
-              <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">
-                {selectedPlaylist.name}
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {selectedPlaylist.episodes.length} episode
-                {selectedPlaylist.episodes.length !== 1 ? 's' : ''}
-              </p>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">
+                    {selectedPlaylist.name}
+                  </h1>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {selectedPlaylist.episodes.length} episode
+                    {selectedPlaylist.episodes.length !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <Button
+                  onClick={() => setDialogOpen(true)}
+                  className="shrink-0 gap-1.5 rounded-full transition-transform active:scale-95"
+                >
+                  <Plus className="size-4" />
+                  Add Clip
+                </Button>
+              </div>
 
               {selectedPlaylist.episodes.length === 0 ? (
-                <p className="mt-6 text-sm text-muted-foreground">
-                  ยังไม่มี episode ใน playlist นี้
-                </p>
+                <div className="flex flex-col items-center justify-center gap-4 py-20 text-center animate-in fade-in-0 zoom-in-95 duration-300">
+                  <button
+                    type="button"
+                    onClick={() => setDialogOpen(true)}
+                    aria-label="เพิ่ม Episode แรกให้ playlist นี้"
+                    className="group flex size-24 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 transition-transform duration-200 hover:scale-110 hover:shadow-xl hover:shadow-primary/40 active:scale-95"
+                  >
+                    <Plus className="size-10 transition-transform duration-200 group-hover:rotate-90" />
+                  </button>
+                  <div>
+                    <p className="text-base font-semibold text-foreground">
+                      Playlist นี้ยังไม่มี episode
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      กดปุ่ม + เพื่อวาง URL หรือค้นหาวิดีโอเพิ่ม
+                    </p>
+                  </div>
+                </div>
               ) : (
                 <div className="mt-6 grid grid-cols-2 gap-5 lg:grid-cols-3 xl:grid-cols-4">
                   {selectedPlaylist.episodes.map((episode, index) => {
@@ -284,8 +348,9 @@ export function MusicDashboard() {
                     return (
                       <div
                         key={episode.id}
+                        style={{ animationDelay: `${Math.min(index, 12) * 40}ms` }}
                         className={cn(
-                          'group relative aspect-square overflow-hidden rounded-3xl shadow-sm ring-1 ring-black/5 transition-transform hover:-translate-y-1 hover:shadow-lg',
+                          'group relative aspect-square overflow-hidden rounded-3xl shadow-sm ring-1 ring-black/5 transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-lg animate-in fade-in-0 slide-in-from-bottom-2 fill-mode-backwards',
                           isCurrent && 'ring-2 ring-primary'
                         )}
                       >
@@ -454,6 +519,15 @@ export function MusicDashboard() {
         onAddEpisode={addEpisode}
         onAddEpisodeFromSearchResult={addEpisodeFromSearchResult}
         onImportPlaylist={importYouTubePlaylist}
+      />
+
+      <SelectPlaylistDialog
+        open={selectPlaylistOpen}
+        onOpenChange={setSelectPlaylistOpen}
+        playlists={playlists}
+        clip={pickedClip}
+        onCreatePlaylist={createPlaylist}
+        onAddEpisodeFromSearchResult={addEpisodeFromSearchResult}
       />
     </div>
   )

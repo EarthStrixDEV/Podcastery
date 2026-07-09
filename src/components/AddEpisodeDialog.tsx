@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Search, Loader2 } from 'lucide-react'
+import { Plus, Search, Loader2, SearchX } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -61,6 +61,7 @@ export function AddEpisodeDialog({
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<SearchResultItem[]>([])
   const [isSearching, setIsSearching] = useState(false)
+  const [hasSearched, setHasSearched] = useState(false)
   const [addingVideoId, setAddingVideoId] = useState<string | null>(null)
 
   const reset = () => {
@@ -72,6 +73,7 @@ export function AddEpisodeDialog({
     setSearchQuery('')
     setSearchResults([])
     setIsSearching(false)
+    setHasSearched(false)
     setAddingVideoId(null)
     setTab('url')
   }
@@ -86,6 +88,7 @@ export function AddEpisodeDialog({
     if (next === 'url') {
       setSearchQuery('')
       setSearchResults([])
+      setHasSearched(false)
       setAddingVideoId(null)
     }
   }
@@ -150,6 +153,7 @@ export function AddEpisodeDialog({
     try {
       const results = await searchVideos(searchQuery.trim())
       setSearchResults(results)
+      setHasSearched(true)
     } catch (err) {
       notifyError(err instanceof Error ? err.message : 'ค้นหาไม่สำเร็จ')
     } finally {
@@ -173,15 +177,17 @@ export function AddEpisodeDialog({
   }
 
   const playlistSelector = (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="playlist-select">Playlist</Label>
+    <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-1">
+        <Label htmlFor="playlist-select" className="text-xs text-muted-foreground">
+          Playlist
+        </Label>
         <select
           id="playlist-select"
           value={selectedPlaylistId}
           onChange={(e) => setSelectedPlaylistId(e.target.value)}
           className={cn(
-            'h-8 rounded-lg border border-border bg-background px-2.5 text-sm outline-none',
+            'h-9 w-full rounded-lg border border-border bg-background px-2.5 text-sm outline-none',
             'focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
           )}
         >
@@ -195,13 +201,16 @@ export function AddEpisodeDialog({
       </div>
 
       {selectedPlaylistId === NEW_PLAYLIST_VALUE && (
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="new-playlist-name">ชื่อ Playlist ใหม่</Label>
+        <div className="flex flex-col gap-1 animate-in fade-in-0 slide-in-from-top-1 duration-200">
+          <Label htmlFor="new-playlist-name" className="text-xs text-muted-foreground">
+            ชื่อ Playlist ใหม่
+          </Label>
           <Input
             id="new-playlist-name"
             placeholder="เช่น My Podcasts"
             value={newPlaylistName}
             onChange={(e) => setNewPlaylistName(e.target.value)}
+            className="h-9"
           />
         </div>
       )}
@@ -210,7 +219,7 @@ export function AddEpisodeDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>เพิ่ม Episode</DialogTitle>
           <DialogDescription>
@@ -227,8 +236,8 @@ export function AddEpisodeDialog({
             aria-controls="panel-url"
             onClick={() => handleTabChange('url')}
             className={cn(
-              'flex-1 rounded-md py-1.5 text-sm font-medium transition-colors',
-              tab === 'url' ? 'bg-background shadow-sm' : 'text-muted-foreground'
+              'flex-1 rounded-md py-1.5 text-sm font-medium transition-all duration-200',
+              tab === 'url' ? 'bg-background shadow-sm' : 'text-muted-foreground hover:text-foreground'
             )}
           >
             วาง URL
@@ -274,7 +283,11 @@ export function AddEpisodeDialog({
             )}
 
             <DialogFooter>
-              <Button onClick={handleSubmitUrl} disabled={isSubmitting} className="gap-1.5">
+              <Button
+                onClick={handleSubmitUrl}
+                disabled={isSubmitting}
+                className="gap-1.5 transition-transform active:scale-95"
+              >
                 {isSubmitting ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
@@ -303,6 +316,7 @@ export function AddEpisodeDialog({
                 onClick={handleSearch}
                 disabled={isSearching || !searchQuery.trim()}
                 size="icon"
+                className="transition-transform active:scale-90"
               >
                 {isSearching ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -313,30 +327,56 @@ export function AddEpisodeDialog({
             </div>
 
             <div className="flex max-h-72 flex-col gap-2 overflow-y-auto">
-              {searchResults.map((result) => (
-                <button
-                  key={result.videoId}
-                  type="button"
-                  onClick={() => handlePickSearchResult(result)}
-                  disabled={addingVideoId === result.videoId}
-                  className="flex items-center gap-3 rounded-lg p-2 text-left text-sm hover:bg-muted disabled:opacity-50"
-                >
-                  <img
-                    src={result.thumbnail}
-                    alt={result.title}
-                    className="h-10 w-16 shrink-0 rounded-md object-cover"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-foreground">{result.title}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {result.channelTitle}
-                    </p>
+              {isSearching &&
+                Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex animate-pulse items-center gap-3 rounded-lg p-2"
+                    style={{ animationDelay: `${i * 75}ms` }}
+                  >
+                    <div className="h-10 w-16 shrink-0 rounded-md bg-muted" />
+                    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                      <div className="h-3.5 w-3/4 rounded bg-muted" />
+                      <div className="h-3 w-1/2 rounded bg-muted" />
+                    </div>
                   </div>
-                  {addingVideoId === result.videoId && (
-                    <Loader2 className="size-4 shrink-0 animate-spin" />
-                  )}
-                </button>
-              ))}
+                ))}
+
+              {!isSearching && hasSearched && searchResults.length === 0 && (
+                <div className="flex flex-col items-center gap-2 py-8 text-center animate-in fade-in-0 duration-200">
+                  <SearchX className="size-6 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    ไม่พบวิดีโอที่ตรงกับ "{searchQuery}"
+                  </p>
+                </div>
+              )}
+
+              {!isSearching &&
+                searchResults.map((result, index) => (
+                  <button
+                    key={result.videoId}
+                    type="button"
+                    onClick={() => handlePickSearchResult(result)}
+                    disabled={addingVideoId === result.videoId}
+                    style={{ animationDelay: `${Math.min(index, 8) * 30}ms` }}
+                    className="flex items-center gap-3 rounded-lg p-2 text-left text-sm transition-colors duration-150 hover:bg-muted disabled:opacity-50 animate-in fade-in-0 slide-in-from-bottom-1 fill-mode-backwards"
+                  >
+                    <img
+                      src={result.thumbnail}
+                      alt={result.title}
+                      className="h-10 w-16 shrink-0 rounded-md object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-foreground">{result.title}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {result.channelTitle}
+                      </p>
+                    </div>
+                    {addingVideoId === result.videoId && (
+                      <Loader2 className="size-4 shrink-0 animate-spin" />
+                    )}
+                  </button>
+                ))}
             </div>
           </div>
         )}
