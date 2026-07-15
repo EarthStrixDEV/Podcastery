@@ -174,6 +174,10 @@ export async function searchVideos(query: string): Promise<SearchResultItem[]> {
     console.error(`[YouTube API] search endpoint ตอบ 403 — โควต้าหมด หรือ API key ถูกจำกัด referrer/IP`)
     throw new Error('โควต้า YouTube API หมดสำหรับวันนี้ ลองใหม่พรุ่งนี้ หรือวาง URL แทนการค้นหา')
   }
+  if (res.status === 429) {
+    console.error(`[YouTube API] search endpoint ตอบ 429 — ยิง request ถี่เกินไป`)
+    throw new Error('ค้นหาถี่เกินไป กรุณารอสักครู่แล้วลองใหม่')
+  }
   if (!res.ok) {
     console.error(`[YouTube API] search endpoint ตอบ status ${res.status} ${res.statusText}`)
     throw new Error('ค้นหาไม่สำเร็จ ลองใหม่อีกครั้ง')
@@ -223,6 +227,10 @@ export async function fetchPlaylistVideoIds(playlistId: string): Promise<string[
     if (res.status === 403) {
       console.error(`[YouTube API] playlistItems endpoint ตอบ 403 — โควต้าหมด หรือ API key ถูกจำกัด referrer/IP`)
       throw new Error('โควต้า YouTube API หมดสำหรับวันนี้ ลองใหม่พรุ่งนี้')
+    }
+    if (res.status === 429) {
+      console.error(`[YouTube API] playlistItems endpoint ตอบ 429 — ยิง request ถี่เกินไป`)
+      throw new Error('นำเข้า playlist ถี่เกินไป กรุณารอสักครู่แล้วลองใหม่')
     }
     if (!res.ok) {
       console.error(`[YouTube API] playlistItems endpoint ตอบ status ${res.status} ${res.statusText}`)
